@@ -1,6 +1,6 @@
 --// Signal
 --[[
-	A super-light, yield-safe event class (a port of stravant's thread-reusing signal).
+	An optimized port of stravant's thread-reusing signal by mobogreat.
 
 	All listeners in this module run on a single recycled coroutine thread,
 	so a listener may yield (e.g. task.wait()) without blocking the caller

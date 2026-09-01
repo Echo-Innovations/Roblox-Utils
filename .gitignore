@@ -7,3 +7,5 @@
 !selene.toml
 !LICENSE
 !.gitignore
+!rokit.toml
+!selene_std.yml
