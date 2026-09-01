@@ -1,0 +1,9 @@
+# Ignore all
+*
+
+# Exclusions
+!Utils.luau
+!Signal.luau
+!selene.toml
+!LICENSE
+!.gitignore
