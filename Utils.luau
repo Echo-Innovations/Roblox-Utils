@@ -60,6 +60,24 @@ export type ColorPalette = {
 	TextColor: Color3?,
 }
 
+-- Observer Types
+export type ObservedTable = GenericTable & {
+	OnChanged: Signal,
+	OnKeyChanged: (Key: string) -> Signal,
+	Destroy: (self: ObservedTable) -> (),
+}
+
+-- Default Table Types
+export type TableWithDefault = {
+	SetDefault: (self: TableWithDefault, Value: any) -> (),
+	GetDefault: (self: TableWithDefault) -> any,
+	AddDefault: (self: TableWithDefault, Key: any, Value: any) -> (),
+	RemoveDefault: (self: TableWithDefault, Key: any) -> (),
+	Destroy: (self: TableWithDefault) -> (),
+
+	[string | number]: any,
+}
+
 -- UI Types
 export type Directions = "Right" | "Left" | "Up" | "Down"
 
@@ -95,6 +113,8 @@ end
 	-- Utils.Keys: Returns a table of all the keys in a given table.
 	-- Utils.Values: Returns a table of all the values in a given table.
 	-- Utils.IsEmpty: Returns true if the inputted table is empty.
+	-- Utils.Observer: Creates an observed table that fires Utils Signals (OnChanged, OnKeyChanged(Key)) on any write; Destroy() detaches it.
+	-- Utils.CreateTableWithDefault: Creates a table that returns a default for missing keys, with SetDefault/GetDefault/AddDefault/RemoveDefault/Destroy.
     -- Maybe more soon?
 ]]
 
@@ -264,6 +284,114 @@ end
 -- Returns true if the given table is empty (no keys at all).
 function Utils.IsEmpty(Table: GenericTable): boolean
 	return next(Table) == nil
+end
+
+-- Creates an observed table: any write to it fires OnChanged (Key, NewValue, OldValue),
+-- and OnKeyChanged(Key) returns a per-key signal firing (NewValue, OldValue).
+-- The signals live on the metatable, so they don't show up in pairs/Keys/Values.
+-- Signals are accessed with colon calls: State.OnChanged:Connect(...), State.OnKeyChanged("Score"):Connect(...).
+-- Only top-level writes are observed; nested tables are plain values. Destroy() detaches the metatable.
+function Utils.Observer(InitialTable: GenericTable?): ObservedTable
+	local Observed = InitialTable or {}
+
+	-- Metamethods are added at runtime, so keep the metadata table loosely typed
+	local Meta: any = {
+		OnChanged = Utils.NewSignal(),
+		KeySignals = {},
+	}
+
+	Meta.__index = function(_, Key)
+		if Key == "OnChanged" then
+			return Meta.OnChanged
+		elseif Key == "OnKeyChanged" then
+			return function(KeyName: string)
+				local KeySignal = Meta.KeySignals[KeyName]
+				if not KeySignal then
+					KeySignal = Utils.NewSignal()
+					Meta.KeySignals[KeyName] = KeySignal
+				end
+				return KeySignal
+			end
+		elseif Key == "Destroy" then
+			return function()
+				setmetatable(Observed, nil)
+			end
+		end
+
+		return nil
+	end
+
+	Meta.__newindex = function(self, Key, Value)
+		local OldValue = rawget(self, Key)
+		if OldValue == Value then
+			return
+		end
+
+		rawset(self, Key, Value)
+
+		local KeySignal = Meta.KeySignals[Key]
+		if KeySignal then
+			KeySignal:Fire(Value, OldValue)
+		end
+
+		Meta.OnChanged:Fire(Key, Value, OldValue)
+	end
+
+	return (setmetatable(Observed, Meta) :: any) :: ObservedTable
+end
+
+-- Creates a table where reads of missing keys return Default instead of nil.
+-- If Default is a function, it is called with the key; writes behave like a normal table
+-- (after a write, reads return the written value). The metatable doesn't show up in pairs/Keys/Values.
+-- The table also exposes default-management functions:
+--     -- SetDefault(Value): change the general default.
+--     -- GetDefault(): read the general default.
+--     -- AddDefault(Key, Value): a per-key default that overrides the general one.
+--     -- RemoveDefault(Key): drop a per-key default (falls back to the general one).
+function Utils.CreateTableWithDefault(Default: any, Table: GenericTable?): TableWithDefault
+	local Defaulted = Table or {}
+
+	local Meta: any = {
+		Default = Default,
+		KeyDefaults = {},
+	}
+
+	Meta.__index = function(_, Key)
+		if Key == "SetDefault" then
+			return function(_, NewDefault: any)
+				Meta.Default = NewDefault
+			end
+		elseif Key == "GetDefault" then
+			return function()
+				return Meta.Default
+			end
+		elseif Key == "AddDefault" then
+			return function(_, KeyName: any, Value: any)
+				Meta.KeyDefaults[KeyName] = Value
+			end
+		elseif Key == "RemoveDefault" then
+			return function(_, KeyName: any)
+				Meta.KeyDefaults[KeyName] = nil
+			end
+		elseif Key == "Destroy" then
+			return function()
+				setmetatable(Defaulted, nil)
+			end
+		end
+
+		local KeyDefault = Meta.KeyDefaults[Key]
+		if KeyDefault ~= nil then
+			return KeyDefault
+		end
+
+		if type(Meta.Default) == "function" then
+			return Meta.Default(Key)
+		end
+
+		return Meta.Default
+	end
+
+	return (setmetatable(Defaulted, Meta) :: any) :: TableWithDefault
 end
 
 --[[ Signal
