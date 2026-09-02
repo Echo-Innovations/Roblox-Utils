@@ -89,6 +89,7 @@ local _WeakKeyTable = {__mode = "k"}
 Utils.TweenInfos = {} :: {[string]: TweenInfo}
 Utils.ColorPalettes = {} :: {[string]: ColorPalette}
 Utils.MemoizeCache = {} :: {[GenericFunction]: GenericStringAnyTable}
+local MemoizedFunctionSet = {} :: {[GenericFunction]: boolean}
 Utils.Signals = Signal.Signals :: {SignalData} -- Making sure its correctly types idrk
 
 --// Initialization
@@ -1363,16 +1364,58 @@ function Utils.Once(Function: GenericFunction): GenericFunction
 	end
 end
 
--- Returns a function that caches the result of Function per unique set of arguments
--- (keys are built from each argument's type and string value, and nil results are cached too).
--- The cache lives in Utils.MemoizeCache, keyed by the original function.
+-- Returns a function that caches the result of Function per unique set of arguments.
+-- Keys are built by VALUE: primitives compare by value, tables are compared deeply (order-independent,
+-- cycle-safe), and function arguments are computed (called with no arguments) and keyed by their result.
+-- A function argument that is itself a Memoize wrapper is treated as stable by identity instead of being
+-- called. Nil results are cached too. The cache lives in Utils.MemoizeCache, keyed by the original function.
 function Utils.Memoize(Function: GenericFunction): GenericFunction
 	local Cache = Utils.MemoizeCache[Function] or {}
-	return function(...)
+
+	local function BuildKey(Value: any, Visited: {[any]: boolean}, Depth: number): string
+		local ValueType = type(Value)
+		if ValueType == "boolean" or ValueType == "number" or ValueType == "string" or ValueType == "nil" then
+			return `{ValueType}:{tostring(Value)}`
+		end
+
+		if Depth > 32 or Visited[Value] then
+			return `{ValueType}:{tostring(Value)}`
+		end
+
+		if ValueType == "function" then
+			if MemoizedFunctionSet[Value] then
+				return `function:{tostring(Value)}`
+			end
+
+			local Success, Result = pcall(Value)
+			if Success then
+				return `function({BuildKey(Result, Visited, Depth + 1)})`
+			end
+
+			return `function:{tostring(Value)}`
+		end
+
+		if ValueType == "table" then
+			Visited[Value] = true
+			local KeyParts = {}
+			for Key, Child in pairs(Value) do
+				table.insert(KeyParts, `{BuildKey(Key, Visited, Depth + 1)}={BuildKey(Child, Visited, Depth + 1)}`)
+			end
+			table.sort(KeyParts)
+			Visited[Value] = nil
+
+			return "table({" .. table.concat(KeyParts, "&") .. "})"
+		end
+
+		return `{ValueType}:{tostring(Value)}`
+	end
+
+	local Wrapper: GenericFunction = function(...)
 		local Args = {...}
 		local KeyParts = {}
+		local Visited = {}
 		for _, Arg in ipairs(Args) do
-			table.insert(KeyParts, `{typeof(Arg)}:{tostring(Arg)}`)
+			table.insert(KeyParts, BuildKey(Arg, Visited, 0))
 		end
 		local Key = table.concat(KeyParts, "|")
 
@@ -1385,6 +1428,10 @@ function Utils.Memoize(Function: GenericFunction): GenericFunction
 
 		return Result
 	end
+
+	MemoizedFunctionSet[Wrapper] = true
+
+	return Wrapper
 end
 
 
