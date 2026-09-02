@@ -16,7 +16,7 @@ local ReflectionService = game:GetService("ReflectionService")
 local TweenService = game:GetService("TweenService")
 
 --// Requires
-local Signal = require("./Signal")
+local Signal = require("@self/Signal")
 
 --// Types
 -- Generic Types
@@ -64,7 +64,17 @@ export type ColorPalette = {
 export type ObservedTable = GenericTable & {
 	OnChanged: Signal,
 	OnKeyChanged: (Key: string) -> Signal,
+	OnDestroy: Signal,
 	Destroy: (self: ObservedTable) -> (),
+}
+
+-- Computed Types
+export type ComputedValue = GenericTable & {
+	Value: any,
+	OnRecompute: Signal,
+	OnChanged: Signal,
+	OnDestroy: Signal,
+	Destroy: (self: ComputedValue) -> any,
 }
 
 -- Default Table Types
@@ -73,13 +83,14 @@ export type TableWithDefault = {
 	GetDefault: (self: TableWithDefault) -> any,
 	AddDefault: (self: TableWithDefault, Key: any, Value: any) -> (),
 	RemoveDefault: (self: TableWithDefault, Key: any) -> (),
+	OnDestroy: Signal,
 	Destroy: (self: TableWithDefault) -> (),
 
 	[string | number]: any,
 }
 
 -- UI Types
-export type Directions = "Right" | "Left" | "Up" | "Down"
+export type Direction = "Right" | "Left" | "Up" | "Down"
 
 --// Constants
 local WeakValueTable = {__mode = "v"}
@@ -289,15 +300,19 @@ end
 
 -- Creates an observed table: any write to it fires OnChanged (Key, NewValue, OldValue),
 -- and OnKeyChanged(Key) returns a per-key signal firing (NewValue, OldValue).
--- The signals live on the metatable, so they don't show up in pairs/Keys/Values.
--- Signals are accessed with colon calls: State.OnChanged:Connect(...), State.OnKeyChanged("Score"):Connect(...).
--- Only top-level writes are observed; nested tables are plain values. Destroy() detaches the metatable.
+-- Luau skips __newindex on existing keys, so the returned object is a PROXY: an empty table whose
+-- reads/writes delegate to a hidden backing store (the InitialTable). Keys never exist on the proxy,
+-- so every write fires. Signals live on the metatable and don't show up in pairs/Keys/Values.
+-- Destroy() fires OnDestroy and detaches the proxy; the backing table keeps its data.
 function Utils.Observer(InitialTable: GenericTable?): ObservedTable
-	local Observed = InitialTable or {}
+	local Backing = InitialTable or {}
+	local Observed = {}
 
 	-- Metamethods are added at runtime, so keep the metadata table loosely typed
 	local Meta: any = {
+		Backing = Backing,
 		OnChanged = Utils.NewSignal(),
+		OnDestroy = Utils.NewSignal(),
 		KeySignals = {},
 	}
 
@@ -313,22 +328,25 @@ function Utils.Observer(InitialTable: GenericTable?): ObservedTable
 				end
 				return KeySignal
 			end
+		elseif Key == "OnDestroy" then
+			return Meta.OnDestroy
 		elseif Key == "Destroy" then
 			return function()
+				Meta.OnDestroy:Fire()
 				setmetatable(Observed, nil)
 			end
 		end
 
-		return nil
+		return Backing[Key]
 	end
 
-	Meta.__newindex = function(self, Key, Value)
-		local OldValue = rawget(self, Key)
+	Meta.__newindex = function(_, Key, Value)
+		local OldValue = Backing[Key]
 		if OldValue == Value then
 			return
 		end
 
-		rawset(self, Key, Value)
+		Backing[Key] = Value
 
 		local KeySignal = Meta.KeySignals[Key]
 		if KeySignal then
@@ -355,6 +373,7 @@ function Utils.CreateTableWithDefault(Default: any, Table: GenericTable?): Table
 	local Meta: any = {
 		Default = Default,
 		KeyDefaults = {},
+		OnDestroy = Utils.NewSignal(),
 	}
 
 	Meta.__index = function(_, Key)
@@ -374,8 +393,11 @@ function Utils.CreateTableWithDefault(Default: any, Table: GenericTable?): Table
 			return function(_, KeyName: any)
 				Meta.KeyDefaults[KeyName] = nil
 			end
+		elseif Key == "OnDestroy" then
+			return Meta.OnDestroy
 		elseif Key == "Destroy" then
 			return function()
+				Meta.OnDestroy:Fire()
 				setmetatable(Defaulted, nil)
 			end
 		end
@@ -393,6 +415,122 @@ function Utils.CreateTableWithDefault(Default: any, Table: GenericTable?): Table
 	end
 
 	return (setmetatable(Defaulted, Meta) :: any) :: TableWithDefault
+end
+
+-- Returns true if Value1 and Value2 are deeply equal: primitives compare by value, tables are
+-- compared recursively and order-independently, and everything else compares by reference.
+-- Cyclic tables are handled (equal cycles return true). The runtime equivalent of Memoize's keying.
+function Utils.DeepEqual(Value1: any, Value2: any): boolean
+	-- Maps each visited table of Value1 to the table of Value2 it is being compared against,
+	-- so cyclic structures compare equal when their cycles mirror each other.
+	local Visited: {[any]: any} = {}
+
+	local function Equals(A: any, B: any): boolean
+		if A == B then
+			return true
+		end
+
+		if type(A) ~= "table" or type(B) ~= "table" then
+			return false
+		end
+
+		if Visited[A] ~= nil then
+			return Visited[A] == B
+		end
+		Visited[A] = B
+
+		for Key, Value in pairs(A) do
+			if not Equals(Value, B[Key]) then
+				return false
+			end
+		end
+
+		for Key in pairs(B) do
+			if A[Key] == nil then
+				return false
+			end
+		end
+
+		return true
+	end
+
+	return Equals(Value1, Value2)
+end
+
+-- Creates a computed value: Value is produced by Compute(), and any dependency changing
+-- triggers a recomputation. Dependencies can be a single Utils Signal, observed table or other
+-- computed value, or a list of them (observed/computed tables use their OnChanged signal).
+-- OnRecompute fires with the new value on every recompute; OnChanged fires with (NewValue, OldValue)
+-- only when the value actually changed (it also fires once on creation with the initial value).
+-- Destroy() disconnects the dependencies, fires OnDestroy with the last value, and returns that value.
+function Utils.Computed(Dependencies: Signal | ObservedTable | ComputedValue | {Signal | ObservedTable | ComputedValue}, Compute: () -> any): ComputedValue
+	local Computed = {}
+
+	local Meta: any = {
+		HasValue = false,
+		Value = nil,
+		OnRecompute = Utils.NewSignal(),
+		OnChanged = Utils.NewSignal(),
+		OnDestroy = Utils.NewSignal(),
+		Connections = {},
+	}
+
+	local function Recompute()
+		local NewValue = Compute()
+
+		Meta.OnRecompute:Fire(NewValue)
+
+		local OldValue = Meta.Value
+		if not Meta.HasValue or NewValue ~= OldValue then
+			Meta.HasValue = true
+			Meta.Value = NewValue
+			Meta.OnChanged:Fire(NewValue, OldValue)
+		end
+	end
+
+	Meta.__index = function(_, Key)
+		if Key == "Value" then
+			return Meta.Value
+		elseif Key == "OnRecompute" then
+			return Meta.OnRecompute
+		elseif Key == "OnChanged" then
+			return Meta.OnChanged
+		elseif Key == "OnDestroy" then
+			return Meta.OnDestroy
+		elseif Key == "Destroy" then
+			return function()
+				for _, Connection in ipairs(Meta.Connections) do
+					Connection:Disconnect()
+				end
+				Meta.OnDestroy:Fire(Meta.Value)
+				rawset(Computed, "Value", Meta.Value)
+				setmetatable(Computed, nil)
+				return Meta.Value
+			end
+		end
+
+		return nil
+	end
+
+	-- Accept either a single dependency or a list of them
+	local RawDependencies: any = Dependencies
+	local DependencyList: {Signal | ObservedTable | ComputedValue} = RawDependencies
+	if type(RawDependencies.Connect) == "function" or type(RawDependencies.OnChanged) == "table" then
+		DependencyList = {RawDependencies}
+	end
+
+	for _, Dependency in ipairs(DependencyList) do
+		-- A dependency is either a signal itself, or an observed/computed table exposing OnChanged
+		local Source = Dependency
+		if type(Dependency.Connect) ~= "function" then
+			Source = Dependency.OnChanged
+		end
+		table.insert(Meta.Connections, Source:Connect(Recompute))
+	end
+
+	Recompute()
+
+	return (setmetatable(Computed, Meta) :: any) :: ComputedValue
 end
 
 --[[ Signal
@@ -1506,7 +1644,7 @@ end
 -- sits on top with the opposite gradient, so the content always shows the color that contrasts its side of the wipe. No clips, no position math.
 -- StartDirection can be a direction ("Left"/"Right"/"Up"/"Down", default "Right") or any angle in degrees (e.g. 127).
 -- TweenInfo can be an existing Utils.TweenInfos name or a raw TweenInfo.
-function Utils.NewContrastWipe(Background: GuiObject, Content: GuiObject, TweenInfo: TweenInfo | string, RevealedColor: Color3?, StartDirection: Directions | number?): ContrastWipe
+function Utils.NewContrastWipe(Background: GuiObject, Content: GuiObject, TweenInfo: TweenInfo | string, RevealedColor: Color3?, StartDirection: Direction | number?): ContrastWipe
 	local Info: TweenInfo
 	if type(TweenInfo) == "string" then
 		Info = Utils.TweenInfos[TweenInfo]
