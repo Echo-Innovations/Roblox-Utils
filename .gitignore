@@ -2,10 +2,11 @@
 *
 
 # Exclusions
-!Utils.luau
+!Utils.init.luau
 !Signal.luau
 !selene.toml
 !LICENSE
 !.gitignore
 !rokit.toml
-!selene_std.yml
+!roblox.yml
+!.luaurc

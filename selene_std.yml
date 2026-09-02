@@ -1,5 +1,0 @@
-base: roblox
-
-globals:
-  SecurityCapabilities:
-    any: true

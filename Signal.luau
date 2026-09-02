@@ -26,6 +26,7 @@ export type SignalConnectionData = {
 }
 
 export type SignalData = {
+	Id: number,
 	Head: SignalConnectionData?,
 	ListenerCount: number,
 }
@@ -35,9 +36,11 @@ export type SignalClassType = {
 	New: () -> Signal,
 	Connect: (self: SignalData, Listener: (...any) -> ()) -> SignalConnection,
 	Disconnect: (self: SignalConnectionData) -> (),
+	DisconnectAll: () -> (),
 	Fire: (self: SignalData, ...any) -> (),
 	Wait: (self: SignalData) -> (...any),
 	GetListenerCount: (self: SignalData) -> number,
+	Signals: {SignalData},
 }
 
 local SignalClass: SignalClassType = {} :: SignalClassType
@@ -45,6 +48,10 @@ SignalClass.__index = SignalClass
 
 -- The single recycled runner thread shared by every signal in this module:
 local FreeRunnerThread: thread? = nil
+
+-- Every signal created through this module, so they can be inspected or bulk-disconnected:
+SignalClass.Signals = {} :: {SignalData}
+local NextSignalId = 0
 
 local function RunHandlerInFreeThread(Listener: (...any) -> (), ...: any)
 	-- Claim the runner thread for the duration of this listener:
@@ -61,10 +68,16 @@ end
 
 -- Creates a new event
 function SignalClass.New(): Signal
-	return setmetatable({
+	local NewSignal = setmetatable({
+		Id = NextSignalId,
 		Head = nil,
 		ListenerCount = 0,
 	} :: SignalData, SignalClass) :: any
+
+	NextSignalId += 1
+	table.insert(SignalClass.Signals, NewSignal)
+
+	return NewSignal
 end
 
 -- Connects a listener; returns a connection object that can disconnect it
@@ -105,6 +118,18 @@ function SignalClass.Disconnect(self: SignalConnectionData)
 		end
 		if Previous ~= nil then
 			Previous.Next = self.Next
+		end
+	end
+end
+
+-- Disconnects every connection of every signal created through this module.
+function SignalClass.DisconnectAll()
+	for _, Signal in ipairs(SignalClass.Signals) do
+		local Item = Signal.Head
+		while Item ~= nil do
+			local NextItem = Item.Next
+			SignalClass.Disconnect(Item)
+			Item = NextItem
 		end
 	end
 end

@@ -1,4 +1,4 @@
-std = "selene_std"
+std = "roblox"
 
 [lints]
 multiple_statements = "allow"
