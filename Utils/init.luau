@@ -7,8 +7,8 @@
 local Utils = {}
 
 --// Config
-local IsTweenStorageWeak = true -- If true, stored TweenInfos will be weakly referenced and may be garbage collected if memory usage is high, which can decrease memory usage but may destroy some of the created TweenInfos.
-local IsColorStorageWeak = true -- If true, stored ColorPalettes will be weakly referenced and may be garbage collected if memory usage is high, which can decrease memory usage but may destroy some of the created ColorPalettes.
+local IsTweenStorageWeak = false -- If true, stored TweenInfos will be weakly referenced and may be garbage collected if memory usage is high, which can decrease memory usage but may destroy some of the created TweenInfos.
+local IsColorStorageWeak = false -- If true, stored ColorPalettes will be weakly referenced and may be garbage collected if memory usage is high, which can decrease memory usage but may destroy some of the created ColorPalettes.
 
 -- Expirements
 local EnableExpirements = false -- If true, experimental features below are loaded.

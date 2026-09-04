@@ -121,4 +121,4 @@ The module is `Utils/init.luau`; `Signal.luau` sits beside it - split into its o
 
 At the top of `Utils/init.luau`:
 
-- `IsTweenStorageWeak` / `IsColorStorageWeak` - stored TweenInfos/ColorPalettes are weakly referenced when true. Leave on unless stored things start disappearing.
+- `IsTweenStorageWeak` / `IsColorStorageWeak` - stored TweenInfos/ColorPalettes are weakly referenced when true. Leave off unless you are storing a lot and dont fear losing some of the stored data and you want to decrease memory usage.
