@@ -1,0 +1,26 @@
+{
+  "id": "API/functions",
+  "title": "Functions",
+  "description": "Once",
+  "source": "@site/../docs/API/functions.md",
+  "sourceDirName": "API",
+  "slug": "/API/functions",
+  "permalink": "/Roblox-Utils/docs/API/functions",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 11,
+  "frontMatter": {
+    "sidebar_position": 11
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Value",
+    "permalink": "/Roblox-Utils/docs/API/value"
+  },
+  "next": {
+    "title": "Color",
+    "permalink": "/Roblox-Utils/docs/API/color"
+  }
+}

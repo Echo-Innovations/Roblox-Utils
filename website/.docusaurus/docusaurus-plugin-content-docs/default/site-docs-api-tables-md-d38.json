@@ -1,0 +1,26 @@
+{
+  "id": "api/tables",
+  "title": "Tables",
+  "description": "DeepCopy",
+  "source": "@site/../docs/api/tables.md",
+  "sourceDirName": "api",
+  "slug": "/api/tables",
+  "permalink": "/docs/api/tables",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Getting Started",
+    "permalink": "/docs/getting-started"
+  },
+  "next": {
+    "title": "Signals",
+    "permalink": "/docs/api/signals"
+  }
+}

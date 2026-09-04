@@ -1,0 +1,6 @@
+name = "Roblox Utils"
+description = "A collection of Luau utilities for Roblox"
+
+[home]
+enabled = true
+includeReadme = true

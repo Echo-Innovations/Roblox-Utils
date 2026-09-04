@@ -1,0 +1,26 @@
+{
+  "id": "API/strings",
+  "title": "Strings",
+  "description": "Trim / Strip",
+  "source": "@site/../docs/API/strings.md",
+  "sourceDirName": "API",
+  "slug": "/API/strings",
+  "permalink": "/Roblox-Utils/docs/API/strings",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {
+    "sidebar_position": 6
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Signals",
+    "permalink": "/Roblox-Utils/docs/API/signals"
+  },
+  "next": {
+    "title": "Math & Randomness",
+    "permalink": "/Roblox-Utils/docs/API/math-randomness"
+  }
+}

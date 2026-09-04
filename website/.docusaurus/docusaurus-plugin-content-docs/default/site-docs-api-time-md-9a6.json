@@ -1,0 +1,26 @@
+{
+  "id": "api/time",
+  "title": "Time",
+  "description": "All timestamp functions take unix timestamps (os.time() values), not durations, except FormatCountdown, which takes seconds.",
+  "source": "@site/../docs/api/time.md",
+  "sourceDirName": "api",
+  "slug": "/api/time",
+  "permalink": "/docs/api/time",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {
+    "sidebar_position": 8
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Math & Randomness",
+    "permalink": "/docs/api/math-randomness"
+  },
+  "next": {
+    "title": "Instances",
+    "permalink": "/docs/api/instances"
+  }
+}

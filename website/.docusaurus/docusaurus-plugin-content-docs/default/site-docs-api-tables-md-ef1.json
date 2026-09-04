@@ -1,0 +1,26 @@
+{
+  "id": "API/tables",
+  "title": "Tables",
+  "description": "DeepCopy",
+  "source": "@site/../docs/API/tables.md",
+  "sourceDirName": "API",
+  "slug": "/API/tables",
+  "permalink": "/Roblox-Utils/docs/API/tables",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Getting Started",
+    "permalink": "/Roblox-Utils/docs/getting-started"
+  },
+  "next": {
+    "title": "Signals",
+    "permalink": "/Roblox-Utils/docs/API/signals"
+  }
+}

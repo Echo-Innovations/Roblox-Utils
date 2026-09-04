@@ -1,0 +1,26 @@
+{
+  "id": "API/time",
+  "title": "Time",
+  "description": "All timestamp functions take unix timestamps (os.time() values), not durations, except FormatCountdown, which takes seconds.",
+  "source": "@site/../docs/API/time.md",
+  "sourceDirName": "API",
+  "slug": "/API/time",
+  "permalink": "/Roblox-Utils/docs/API/time",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {
+    "sidebar_position": 8
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Math & Randomness",
+    "permalink": "/Roblox-Utils/docs/API/math-randomness"
+  },
+  "next": {
+    "title": "Instances",
+    "permalink": "/Roblox-Utils/docs/API/instances"
+  }
+}

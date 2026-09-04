@@ -142,8 +142,11 @@ end
     -- Maybe more soon?
 ]]
 
--- SkipJSON Paramater goes directly to a looping fallback if true. Setting it to true would only be useful if you know the table contains non-serializable data. 
--- Creates a deep copy of a table, including nested tables. Attempts JSON serialization first, then falls back to a recursive copy if the data isn't serializable (or if SkipJSON is true).
+--- SkipJSON Paramater goes directly to a looping fallback if true. Setting it to true would only be useful if you know the table contains non-serializable data. 
+--- Creates a deep copy of a table, including nested tables. Attempts JSON serialization first, then falls back to a recursive copy if the data isn't serializable (or if SkipJSON is true).
+--- @param Table GenericTable
+--- @param SkipJSON boolean?
+--- @return GenericTable
 function Utils.DeepCopy(Table: GenericTable, SkipJSON: boolean?): GenericTable
 	if not SkipJSON then
 		-- Attempt to copy using JSON serialization and deserialization
@@ -169,7 +172,10 @@ function Utils.DeepCopy(Table: GenericTable, SkipJSON: boolean?): GenericTable
 	return Copy
 end
 
--- Compares two tables and returns a table of differences. Each diff entry is {Table1Value, Table2Value}; keys only in Table2 appear as {nil, Table2Value}. Nested tables are compared recursively.
+--- Compares two tables and returns a table of differences. Each diff entry is {Table1Value, Table2Value}; keys only in Table2 appear as {nil, Table2Value}. Nested tables are compared recursively.
+--- @param Table1 GenericTable
+--- @param Table2 GenericTable
+--- @return GenericTable
 function Utils.DeepDiff(Table1: GenericTable, Table2: GenericTable): GenericTable
 	local Diff = {}
 	for Key, Value in pairs(Table1) do
@@ -192,10 +198,14 @@ function Utils.DeepDiff(Table1: GenericTable, Table2: GenericTable): GenericTabl
 	return Diff
 end
 
--- Returns true if Table1 and Table2 are deeply equal: primitives compare by value and tables are
--- compared recursively and order-independently. Attempts a JSON serialization comparison first,
--- then falls back to DeepDiff (equal when the diff comes back empty) if the data isn't serializable
--- or if SkipJSON is true. SkipJSON forces the recursive path for non-serializable data.
+--- Returns true if Table1 and Table2 are deeply equal: primitives compare by value and tables are
+--- compared recursively and order-independently. Attempts a JSON serialization comparison first,
+--- then falls back to DeepDiff (equal when the diff comes back empty) if the data isn't serializable
+--- or if SkipJSON is true. SkipJSON forces the recursive path for non-serializable data.
+--- @param Table1 any
+--- @param Table2 any
+--- @param SkipJSON boolean?
+--- @return boolean
 function Utils.DeepEqual(Table1: any, Table2: any, SkipJSON: boolean?): boolean
 	if not SkipJSON then
 		local Success1, Serialized1 = pcall(function()
@@ -221,10 +231,13 @@ function Utils.DeepEqual(Table1: any, Table2: any, SkipJSON: boolean?): boolean
 	return next(Utils.DeepDiff(Table1, Table2)) == nil
 end
 
--- Applies a Utils.DeepDiff result back onto Table, mutating it in place and returning it.
--- Value pairs ({Table1Value, Table2Value}) write/remove keys; nested sub-diffs recurse into the
--- matching nested table. The natural inverse of DeepDiff: after Patch(Table, DeepDiff(Table, Target)),
--- Table deeply equals Target.
+--- Applies a Utils.DeepDiff result back onto Table, mutating it in place and returning it.
+--- Value pairs ({Table1Value, Table2Value}) write/remove keys; nested sub-diffs recurse into the
+--- matching nested table. The natural inverse of DeepDiff: after Patch(Table, DeepDiff(Table, Target)),
+--- Table deeply equals Target.
+--- @param Table GenericTable
+--- @param Diff GenericTable
+--- @return GenericTable
 function Utils.Patch(Table: GenericTable, Diff: GenericTable): GenericTable
 	for Key, Entry in pairs(Diff) do
 		if type(Entry) == "table" then
@@ -255,7 +268,10 @@ function Utils.Patch(Table: GenericTable, Diff: GenericTable): GenericTable
 	return Table
 end
 
--- Shuffles the elements of Table in place and returns it. If Recursive, nested tables are shuffled in place too.
+--- Shuffles the elements of Table in place and returns it. If Recursive, nested tables are shuffled in place too.
+--- @param Table GenericTable
+--- @param Recursive boolean?
+--- @return GenericTable
 function Utils.Shuffle(Table: GenericTable, Recursive: boolean?): GenericTable
 	local Keys = {}
 	for Key in pairs(Table) do
@@ -297,18 +313,27 @@ local function basePickOmit(Table: GenericTable, Keys: {any}, IsPick: boolean): 
 	return Result
 end
 
--- Returns a new table containing only the keys in Keys from Table.
+--- Returns a new table containing only the keys in Keys from Table.
+--- @param Table GenericTable
+--- @param Keys {any}
+--- @return GenericTable
 function Utils.Pick(Table: GenericTable, Keys: {any}): GenericTable
 	return basePickOmit(Table, Keys, true)
 end
 
--- Returns a new table containing everything from Table except the keys in Keys.
+--- Returns a new table containing everything from Table except the keys in Keys.
+--- @param Table GenericTable
+--- @param Keys {any}
+--- @return GenericTable
 function Utils.Omit(Table: GenericTable, Keys: {any}): GenericTable
 	return basePickOmit(Table, Keys, false)
 end
 
--- Returns a new list containing only unique values from Table. If Recursive, nested tables are deduplicated recursively.
--- Primitive values are deduplicated with an O(1) set; tables/functions fall back to a linear scan by reference.
+--- Returns a new list containing only unique values from Table. If Recursive, nested tables are deduplicated recursively.
+--- Primitive values are deduplicated with an O(1) set; tables/functions fall back to a linear scan by reference.
+--- @param Table GenericTable
+--- @param Recursive boolean?
+--- @return GenericTable
 function Utils.Unique(Table: GenericTable, Recursive: boolean?): GenericTable
 	local UniqueValues = {}
 	local PrimitiveSet = {}
@@ -341,7 +366,11 @@ function Utils.Unique(Table: GenericTable, Recursive: boolean?): GenericTable
 	return Result
 end
 
--- Merges Table2 into a copy of Table1 (Table2 wins on duplicate keys). If Recursive, nested tables are merged recursively.
+--- Merges Table2 into a copy of Table1 (Table2 wins on duplicate keys). If Recursive, nested tables are merged recursively.
+--- @param Table1 GenericTable
+--- @param Table2 GenericTable
+--- @param Recursive boolean?
+--- @return GenericTable
 function Utils.Merge(Table1: GenericTable, Table2: GenericTable, Recursive: boolean?): GenericTable
 	local Merged = Utils.DeepCopy(Table1, true)
 	for Key, Value in pairs(Table2) do
@@ -354,7 +383,11 @@ function Utils.Merge(Table1: GenericTable, Table2: GenericTable, Recursive: bool
 	return Merged
 end
 
--- Returns a new table with only the values for which FilterFunction returns true. If Recursive, nested tables are filtered recursively.
+--- Returns a new table with only the values for which FilterFunction returns true. If Recursive, nested tables are filtered recursively.
+--- @param Table GenericTable
+--- @param FilterFunction (any) -> boolean
+--- @param Recursive boolean?
+--- @return GenericTable
 function Utils.Filter(Table: GenericTable, FilterFunction: (any) -> boolean, Recursive: boolean?): GenericTable
 	local Filtered = {}
 	for Key, Value in pairs(Table) do
@@ -367,7 +400,10 @@ function Utils.Filter(Table: GenericTable, FilterFunction: (any) -> boolean, Rec
 	return Filtered
 end
 
--- Returns true if any value in Table equals Value (reference or value comparison per Luau ==).
+--- Returns true if any value in Table equals Value (reference or value comparison per Luau ==).
+--- @param Table GenericTable
+--- @param Value any
+--- @return boolean
 function Utils.Contains(Table: GenericTable, Value: any): boolean
 	for _, Entry in pairs(Table) do
 		if Entry == Value then
@@ -378,8 +414,12 @@ function Utils.Contains(Table: GenericTable, Value: any): boolean
 	return false
 end
 
--- Groups Table's entries into buckets by the key KeyFunction returns for each (value, key) pair.
--- Each group keeps the original keys of its entries: GroupBy({a = 1, b = 2}, v % 2) -> {[1] = {a = 1}, [0] = {b = 2}}.
+--- Groups Table's entries into buckets by the key KeyFunction returns for each (value, key) pair.
+--- Each group keeps the original keys of its entries: GroupBy({a = 1, b = 2}, v % 2) -> {[1] = {a = 1}, [0] = {b = 2}}.
+--- @param Table GenericTable
+--- @param KeyFunction (Value: any
+--- @param Key any) -> any
+--- @return GenericTable
 function Utils.GroupBy(Table: GenericTable, KeyFunction: (Value: any, Key: any) -> any): GenericTable
 	local Groups = {}
 	for Key, Value in pairs(Table) do
@@ -395,8 +435,10 @@ function Utils.GroupBy(Table: GenericTable, KeyFunction: (Value: any, Key: any) 
 	return Groups
 end
 
--- Returns a flat list of every non-table value in Table, recursing through nested tables.
--- Flatten({1, {2, 3}, {4, {5}}}) -> {1, 2, 3, 4, 5}.
+--- Returns a flat list of every non-table value in Table, recursing through nested tables.
+--- Flatten({1, {2, 3}, {4, {5}}}) -> {1, 2, 3, 4, 5}.
+--- @param Table GenericTable
+--- @return GenericTable
 function Utils.Flatten(Table: GenericTable): GenericTable
 	local Result = {}
 
@@ -428,27 +470,37 @@ local function baseKeysValues(Table: GenericTable, Recursive: boolean?, Keys: bo
 	return Data
 end
 
--- Returns a list of all keys in Table (recursively collected if Recursive).
+--- Returns a list of all keys in Table (recursively collected if Recursive).
+--- @param Table GenericTable
+--- @param Recursive boolean?
+--- @return GenericTable
 function Utils.Keys(Table: GenericTable, Recursive: boolean?): GenericTable
 	return baseKeysValues(Table, Recursive, true)
 end
 
--- Returns a list of all values in Table (recursively collected if Recursive).
+--- Returns a list of all values in Table (recursively collected if Recursive).
+--- @param Table GenericTable
+--- @param Recursive boolean?
+--- @return GenericTable
 function Utils.Values(Table: GenericTable, Recursive: boolean?): GenericTable
 	return baseKeysValues(Table, Recursive)
 end
 
--- Returns true if the given table is empty (no keys at all).
+--- Returns true if the given table is empty (no keys at all).
+--- @param Table GenericTable
+--- @return boolean
 function Utils.IsEmpty(Table: GenericTable): boolean
 	return next(Table) == nil
 end
 
--- Creates an observed table: any write to it fires OnChanged (Key, NewValue, OldValue),
--- and OnKeyChanged(Key) returns a per-key signal firing (NewValue, OldValue).
--- Luau skips __newindex on existing keys, so the returned object is a PROXY: an empty table whose
--- reads/writes delegate to a hidden backing store (the InitialTable). Keys never exist on the proxy,
--- so every write fires. Signals live on the metatable and don't show up in pairs/Keys/Values.
--- Destroy() fires OnDestroy and detaches the proxy; the backing table keeps its data.
+--- Creates an observed table: any write to it fires OnChanged (Key, NewValue, OldValue),
+--- and OnKeyChanged(Key) returns a per-key signal firing (NewValue, OldValue).
+--- Luau skips __newindex on existing keys, so the returned object is a PROXY: an empty table whose
+--- reads/writes delegate to a hidden backing store (the InitialTable). Keys never exist on the proxy,
+--- so every write fires. Signals live on the metatable and don't show up in pairs/Keys/Values.
+--- Destroy() fires OnDestroy and detaches the proxy; the backing table keeps its data.
+--- @param InitialTable GenericTable?
+--- @return ObservedTable
 function Utils.Observer(InitialTable: GenericTable?): ObservedTable
 	local Backing = InitialTable or {}
 	local Observed = {}
@@ -504,14 +556,17 @@ function Utils.Observer(InitialTable: GenericTable?): ObservedTable
 	return (setmetatable(Observed, Meta) :: any) :: ObservedTable
 end
 
--- Creates a table where reads of missing keys return Default instead of nil.
--- If Default is a function, it is called with the key; writes behave like a normal table
--- (after a write, reads return the written value). The metatable doesn't show up in pairs/Keys/Values.
--- The table also exposes default-management functions:
---     -- SetDefault(Value): change the general default.
---     -- GetDefault(): read the general default.
---     -- AddDefault(Key, Value): a per-key default that overrides the general one.
---     -- RemoveDefault(Key): drop a per-key default (falls back to the general one).
+--- Creates a table where reads of missing keys return Default instead of nil.
+--- If Default is a function, it is called with the key; writes behave like a normal table
+--- (after a write, reads return the written value). The metatable doesn't show up in pairs/Keys/Values.
+--- The table also exposes default-management functions:
+---     -- SetDefault(Value): change the general default.
+---     -- GetDefault(): read the general default.
+---     -- AddDefault(Key, Value): a per-key default that overrides the general one.
+---     -- RemoveDefault(Key): drop a per-key default (falls back to the general one).
+--- @param Default any
+--- @param Table GenericTable?
+--- @return TableWithDefault
 function Utils.CreateTableWithDefault(Default: any, Table: GenericTable?): TableWithDefault
 	local Defaulted = Table or {}
 
@@ -562,12 +617,15 @@ function Utils.CreateTableWithDefault(Default: any, Table: GenericTable?): Table
 	return (setmetatable(Defaulted, Meta) :: any) :: TableWithDefault
 end
 
--- Creates a computed value: Value is produced by Compute(), and any dependency changing
--- triggers a recomputation. Dependencies can be a single Utils Signal, observed table or other
--- computed value, or a list of them (observed/computed tables use their OnChanged signal).
--- OnRecompute fires with the new value on every recompute; OnChanged fires with (NewValue, OldValue)
--- only when the value actually changed (it also fires once on creation with the initial value).
--- Destroy() disconnects the dependencies, fires OnDestroy with the last value, and returns that value.
+--- Creates a computed value: Value is produced by Compute(), and any dependency changing
+--- triggers a recomputation. Dependencies can be a single Utils Signal, observed table or other
+--- computed value, or a list of them (observed/computed tables use their OnChanged signal).
+--- OnRecompute fires with the new value on every recompute; OnChanged fires with (NewValue, OldValue)
+--- only when the value actually changed (it also fires once on creation with the initial value).
+--- Destroy() disconnects the dependencies, fires OnDestroy with the last value, and returns that value.
+--- @param Dependencies Signal | ObservedTable | ComputedValue | {Signal | ObservedTable | ComputedValue}
+--- @param Compute () -> any
+--- @return ComputedValue
 function Utils.Computed(Dependencies: Signal | ObservedTable | ComputedValue | {Signal | ObservedTable | ComputedValue}, Compute: () -> any): ComputedValue
 	local Computed = {}
 
@@ -638,9 +696,12 @@ function Utils.Computed(Dependencies: Signal | ObservedTable | ComputedValue | {
 	return (setmetatable(Computed, Meta) :: any) :: ComputedValue
 end
 
--- Creates a strict, read-only constant table: unknown-key reads and any writes error.
--- The result is stored in Utils.Enums under Name and returned. Luau's proxy pattern is used
--- (empty table + __index into a backing store) so every access is intercepted.
+--- Creates a strict, read-only constant table: unknown-key reads and any writes error.
+--- The result is stored in Utils.Enums under Name and returned. Luau's proxy pattern is used
+--- (empty table + __index into a backing store) so every access is intercepted.
+--- @param Name string
+--- @param Values GenericTable
+--- @return EnumTable
 function Utils.Enum(Name: string, Values: GenericTable): EnumTable
 	local Enum = {}
 

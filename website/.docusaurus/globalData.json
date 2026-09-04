@@ -1,0 +1,93 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/Roblox-Utils/docs",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/Roblox-Utils/docs",
+          "mainDocId": "introduction",
+          "docs": [
+            {
+              "id": "API/color",
+              "path": "/Roblox-Utils/docs/API/color",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/functions",
+              "path": "/Roblox-Utils/docs/API/functions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/instances",
+              "path": "/Roblox-Utils/docs/API/instances",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/math-randomness",
+              "path": "/Roblox-Utils/docs/API/math-randomness",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/signals",
+              "path": "/Roblox-Utils/docs/API/signals",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/strings",
+              "path": "/Roblox-Utils/docs/API/strings",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/tables",
+              "path": "/Roblox-Utils/docs/API/tables",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/time",
+              "path": "/Roblox-Utils/docs/API/time",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/ui",
+              "path": "/Roblox-Utils/docs/API/ui",
+              "sidebar": "docs"
+            },
+            {
+              "id": "API/value",
+              "path": "/Roblox-Utils/docs/API/value",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started",
+              "path": "/Roblox-Utils/docs/getting-started",
+              "sidebar": "docs"
+            },
+            {
+              "id": "installation",
+              "path": "/Roblox-Utils/docs/installation",
+              "sidebar": "docs"
+            },
+            {
+              "id": "introduction",
+              "path": "/Roblox-Utils/docs/introduction",
+              "sidebar": "docs"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "docs": {
+              "link": {
+                "path": "/Roblox-Utils/docs/introduction",
+                "label": "introduction"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

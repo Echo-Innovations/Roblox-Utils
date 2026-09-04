@@ -1,0 +1,26 @@
+{
+  "id": "API/instances",
+  "title": "Instances",
+  "description": "Searching",
+  "source": "@site/../docs/API/instances.md",
+  "sourceDirName": "API",
+  "slug": "/API/instances",
+  "permalink": "/Roblox-Utils/docs/API/instances",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 9,
+  "frontMatter": {
+    "sidebar_position": 9
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Time",
+    "permalink": "/Roblox-Utils/docs/API/time"
+  },
+  "next": {
+    "title": "Value",
+    "permalink": "/Roblox-Utils/docs/API/value"
+  }
+}

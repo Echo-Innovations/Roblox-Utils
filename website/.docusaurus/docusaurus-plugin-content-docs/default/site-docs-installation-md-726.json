@@ -1,0 +1,26 @@
+{
+  "id": "installation",
+  "title": "Installation",
+  "description": "Two files inside the Utils folder",
+  "source": "@site/../docs/installation.md",
+  "sourceDirName": ".",
+  "slug": "/installation",
+  "permalink": "/Roblox-Utils/docs/installation",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Roblox Utils",
+    "permalink": "/Roblox-Utils/docs/introduction"
+  },
+  "next": {
+    "title": "Getting Started",
+    "permalink": "/Roblox-Utils/docs/getting-started"
+  }
+}

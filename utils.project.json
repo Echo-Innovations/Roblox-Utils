@@ -1,0 +1,12 @@
+{
+	"name": "Roblox Utils",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+			"Utils": {
+				"$path": "Utils"
+			}
+		}
+	}
+}

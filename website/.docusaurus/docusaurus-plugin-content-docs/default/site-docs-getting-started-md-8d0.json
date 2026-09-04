@@ -1,0 +1,26 @@
+{
+  "id": "getting-started",
+  "title": "Getting Started",
+  "description": "The everyday stuff first.",
+  "source": "@site/../docs/getting-started.md",
+  "sourceDirName": ".",
+  "slug": "/getting-started",
+  "permalink": "/Roblox-Utils/docs/getting-started",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Installation",
+    "permalink": "/Roblox-Utils/docs/installation"
+  },
+  "next": {
+    "title": "Tables",
+    "permalink": "/Roblox-Utils/docs/API/tables"
+  }
+}

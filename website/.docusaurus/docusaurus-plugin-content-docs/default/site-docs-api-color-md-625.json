@@ -1,0 +1,26 @@
+{
+  "id": "api/color",
+  "title": "Color",
+  "description": "InvertColor",
+  "source": "@site/../docs/api/color.md",
+  "sourceDirName": "api",
+  "slug": "/api/color",
+  "permalink": "/docs/api/color",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 12,
+  "frontMatter": {
+    "sidebar_position": 12
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Functions",
+    "permalink": "/docs/api/functions"
+  },
+  "next": {
+    "title": "UI",
+    "permalink": "/docs/api/ui"
+  }
+}

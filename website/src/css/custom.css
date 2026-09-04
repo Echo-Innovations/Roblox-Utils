@@ -1,0 +1,207 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* Accent and typography (theme-independent) */
+:root {
+	--ifm-color-primary: #3ecf8e;
+	--ifm-color-primary-dark: #37bb80;
+	--ifm-color-primary-darker: #31a873;
+	--ifm-color-primary-light: #54d69c;
+	--ifm-color-primary-lighter: #6adca9;
+
+	--ifm-font-family-base: "Inter", system-ui, -apple-system, sans-serif;
+	--ifm-font-family-monospace: "JetBrains Mono", ui-monospace, monospace;
+	--ifm-font-weight-bold: 800;
+	--ifm-code-font-size: 0.9rem;
+}
+
+/* Light theme */
+[data-theme="light"] {
+	--ifm-background-color: #ffffff;
+	--ifm-background-surface-color: #f6f8fa;
+	--ifm-font-color-base: #1f2328;
+	--ifm-heading-color: #101828;
+	--ifm-code-background: #f6f8fa;
+	--ifm-code-color: #24292f;
+	--ifm-toc-border-color: rgba(0, 0, 0, 0.08);
+	--ifm-navbar-background-color: rgba(255, 255, 255, 0.8);
+	--ifm-panel-shadow: rgba(0, 0, 0, 0.08);
+	--ifm-accent-tint: rgba(62, 207, 142, 0.1);
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+	--ifm-background-color: #0b0e11;
+	--ifm-background-surface-color: #11151a;
+	--ifm-font-color-base: #e6edf3;
+	--ifm-heading-color: #f2f6f4;
+	--ifm-code-background: #171c22;
+	--ifm-code-color: #e6edf3;
+	--ifm-toc-border-color: rgba(255, 255, 255, 0.06);
+	--ifm-navbar-background-color: rgba(11, 14, 17, 0.75);
+	--ifm-panel-shadow: rgba(0, 0, 0, 0.35);
+	--ifm-accent-tint: rgba(62, 207, 142, 0.12);
+}
+
+/* Selection matches the accent */
+::selection {
+	background: rgba(62, 207, 142, 0.3);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+::-webkit-scrollbar-thumb {
+	background: var(--ifm-font-color-base);
+	opacity: 0.15;
+	border-radius: 5px;
+}
+
+/* Cloudflare-style navbar: translucent, blurred, hairline bottom border */
+.navbar {
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border-bottom: 1px solid var(--ifm-toc-border-color);
+}
+
+/* Navbar links: inactive white, active green (the accent) */
+.navbar__link {
+	color: var(--ifm-color-content);
+}
+.navbar__item.navbar__link--active {
+	color: var(--ifm-color-primary);
+	font-weight: 700;
+}
+
+/* Floating sidebar panel */
+@media (min-width: 997px) {
+	.theme-doc-sidebar-container {
+		padding: 1rem 0.5rem 1rem 0;
+		background: transparent;
+	}
+	.theme-doc-sidebar-container nav.menu {
+		background: var(--ifm-background-surface-color);
+		border: 1px solid var(--ifm-toc-border-color);
+		border-radius: 12px;
+		padding: 0.75rem;
+		margin-right: 0.5rem;
+		box-shadow: 0 4px 24px var(--ifm-panel-shadow);
+	}
+}
+
+/* Sidebar: guide lines on nested lists, green headers, accent bar on the active item */
+.theme-doc-sidebar-item-category > .menu__list,
+.menu__list-item > .menu__list {
+	margin-left: 0.25rem;
+	padding-left: 0.75rem;
+	border-left: 2px solid var(--ifm-toc-border-color);
+}
+
+.theme-doc-sidebar-item-category > .menu__list-item-collapsible > .menu__link {
+	color: var(--ifm-color-primary);
+	font-weight: 800;
+}
+
+.menu__link {
+	border-left: 3px solid transparent;
+	border-radius: 0 6px 6px 0;
+	transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.menu__link:hover {
+	background: var(--ifm-accent-tint);
+	border-left-color: transparent;
+}
+.menu__link--active {
+	border-left-color: var(--ifm-color-primary);
+	background: var(--ifm-accent-tint);
+	color: var(--ifm-color-primary);
+	font-weight: 700;
+}
+.menu__link--active:hover {
+	border-left-color: var(--ifm-color-primary);
+}
+
+/* Cloudflare-style TOC: every row's 2px left border stacks into one continuous line;
+   the active row's border becomes the thick green marker sitting on that same line. */
+.table-of-contents {
+	padding-left: 0.75rem;
+}
+.table-of-contents ul {
+	margin-left: 0;
+	padding-left: 0;
+}
+.table-of-contents li a {
+	display: block;
+	padding: 0.15rem 0.5rem;
+	border-left: 2px solid var(--ifm-toc-border-color);
+	transition: color 0.12s ease, background-color 0.12s ease;
+}
+.table-of-contents li a:hover {
+	background: var(--ifm-accent-tint);
+}
+.table-of-contents li a.table-of-contents__link--active {
+	border-left: 4px solid var(--ifm-color-primary);
+	color: var(--ifm-color-primary);
+	font-weight: 700;
+}
+
+/* Hide breadcrumbs */
+.theme-doc-breadcrumbs {
+	display: none;
+}
+
+/* Code blocks: green accent border; background/token colors come from the Prism theme
+   (dark = dracula, light = github — light block with inverted dark text) */
+.theme-code-block {
+	background: var(--ifm-code-background);
+	border: 1px solid rgba(62, 207, 142, 0.2);
+	border-radius: 10px;
+	box-shadow: 0 2px 12px var(--ifm-panel-shadow);
+}
+.theme-code-block pre[class*="language-"] {
+	background: transparent;
+}
+.theme-code-block .theme-code-block-highlighted-line {
+	background: rgba(62, 207, 142, 0.08);
+}
+
+/* Subtle copy button */
+.theme-code-block .copyButton_Ue-o {
+	opacity: 0.5;
+	transition: opacity 0.15s ease;
+}
+.theme-code-block:hover .copyButton_Ue-o {
+	opacity: 1;
+}
+
+/* Links: accent color, underline on hover */
+a {
+	transition: color 0.12s ease;
+}
+.markdown a {
+	text-decoration: none;
+}
+.markdown a:hover {
+	text-decoration: underline;
+}
+
+/* Small corner radius on panels and cards */
+.theme-doc-markdown,
+.card,
+.pagination-nav__link,
+.table-of-contents {
+	border-radius: 10px;
+}
+
+/* Subtle shadows on pagination and TOC */
+.pagination-nav__link,
+.table-of-contents {
+	box-shadow: 0 2px 12px var(--ifm-panel-shadow);
+}
+
+/* Minimal footer */
+.footer {
+	background: transparent;
+	border-top: 1px solid var(--ifm-toc-border-color);
+}

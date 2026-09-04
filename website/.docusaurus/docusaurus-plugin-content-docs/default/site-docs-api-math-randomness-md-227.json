@@ -1,0 +1,26 @@
+{
+  "id": "api/math-randomness",
+  "title": "Math & Randomness",
+  "description": "IsEven / IsOdd",
+  "source": "@site/../docs/api/math-randomness.md",
+  "sourceDirName": "api",
+  "slug": "/api/math-randomness",
+  "permalink": "/docs/api/math-randomness",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Strings",
+    "permalink": "/docs/api/strings"
+  },
+  "next": {
+    "title": "Time",
+    "permalink": "/docs/api/time"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "API/value",
+  "title": "Value",
+  "description": "Coalesce",
+  "source": "@site/../docs/API/value.md",
+  "sourceDirName": "API",
+  "slug": "/API/value",
+  "permalink": "/Roblox-Utils/docs/API/value",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 10,
+  "frontMatter": {
+    "sidebar_position": 10
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Instances",
+    "permalink": "/Roblox-Utils/docs/API/instances"
+  },
+  "next": {
+    "title": "Functions",
+    "permalink": "/Roblox-Utils/docs/API/functions"
+  }
+}

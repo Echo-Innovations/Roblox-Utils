@@ -1,0 +1,26 @@
+{
+  "id": "API/color",
+  "title": "Color",
+  "description": "InvertColor",
+  "source": "@site/../docs/API/color.md",
+  "sourceDirName": "API",
+  "slug": "/API/color",
+  "permalink": "/Roblox-Utils/docs/API/color",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 12,
+  "frontMatter": {
+    "sidebar_position": 12
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Functions",
+    "permalink": "/Roblox-Utils/docs/API/functions"
+  },
+  "next": {
+    "title": "UI",
+    "permalink": "/Roblox-Utils/docs/API/ui"
+  }
+}

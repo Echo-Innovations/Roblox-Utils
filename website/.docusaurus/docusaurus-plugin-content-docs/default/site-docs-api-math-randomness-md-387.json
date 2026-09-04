@@ -1,0 +1,26 @@
+{
+  "id": "API/math-randomness",
+  "title": "Math & Randomness",
+  "description": "IsEven / IsOdd",
+  "source": "@site/../docs/API/math-randomness.md",
+  "sourceDirName": "API",
+  "slug": "/API/math-randomness",
+  "permalink": "/Roblox-Utils/docs/API/math-randomness",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Strings",
+    "permalink": "/Roblox-Utils/docs/API/strings"
+  },
+  "next": {
+    "title": "Time",
+    "permalink": "/Roblox-Utils/docs/API/time"
+  }
+}

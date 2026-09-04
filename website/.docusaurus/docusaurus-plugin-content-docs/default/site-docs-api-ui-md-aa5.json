@@ -1,0 +1,22 @@
+{
+  "id": "api/ui",
+  "title": "UI",
+  "description": "NewContrastWipe",
+  "source": "@site/../docs/api/ui.md",
+  "sourceDirName": "api",
+  "slug": "/api/ui",
+  "permalink": "/docs/api/ui",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 13,
+  "frontMatter": {
+    "sidebar_position": 13
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Color",
+    "permalink": "/docs/api/color"
+  }
+}

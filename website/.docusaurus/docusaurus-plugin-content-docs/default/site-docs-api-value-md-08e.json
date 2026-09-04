@@ -1,0 +1,26 @@
+{
+  "id": "api/value",
+  "title": "Value",
+  "description": "Coalesce",
+  "source": "@site/../docs/api/value.md",
+  "sourceDirName": "api",
+  "slug": "/api/value",
+  "permalink": "/docs/api/value",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 10,
+  "frontMatter": {
+    "sidebar_position": 10
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Instances",
+    "permalink": "/docs/api/instances"
+  },
+  "next": {
+    "title": "Functions",
+    "permalink": "/docs/api/functions"
+  }
+}

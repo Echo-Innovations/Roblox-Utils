@@ -2,14 +2,28 @@
 *
 
 # Exclusions
-!Utils.init.luau
-!Signal.luau
+!Utils/
+!Utils/**
+!docs/
+!docs/**
+!website/
+!website/**
 !selene.toml
 !LICENSE
 !.gitignore
 !rokit.toml
 !roblox.yml
 !.luaurc
+!README.md
+!utils.project.json
+!moonwave.toml
+!.github/
+!.github/workflows/
+!.github/workflows/pages.yml
 
-# Not for now
-#!LuauVM/
+# Generated
+website/node_modules/
+website/build/
+
+# Ignore for now
+LuauVM/
