@@ -1,5 +1,1 @@
-{
-	"aliases": {
-		"@self": "."
-	}
-}
+{ "aliases": { "@self": "./", "pkg": "./" } }

@@ -1,4 +1,6 @@
 std = "roblox"
 
+exclude = ["LuauVM/**"]
+
 [lints]
 multiple_statements = "allow"

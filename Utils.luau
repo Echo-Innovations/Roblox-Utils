@@ -10,6 +10,9 @@ local Utils = {}
 local IsTweenStorageWeak = true -- If true, stored TweenInfos will be weakly referenced and may be garbage collected if memory usage is high, which can decrease memory usage but may destroy some of the created TweenInfos.
 local IsColorStorageWeak = true -- If true, stored ColorPalettes will be weakly referenced and may be garbage collected if memory usage is high, which can decrease memory usage but may destroy some of the created ColorPalettes.
 
+-- Expirements
+local EnableExpirements = false -- If true, experimental features below are loaded.
+
 --// Services
 local HttpService = game:GetService("HttpService")
 local ReflectionService = game:GetService("ReflectionService")
@@ -89,6 +92,11 @@ export type TableWithDefault = {
 	[string | number]: any,
 }
 
+-- Enum Types
+export type EnumTable = {
+	[string | number]: any,
+}
+
 -- UI Types
 export type Direction = "Right" | "Left" | "Up" | "Down"
 
@@ -100,8 +108,10 @@ local _WeakKeyTable = {__mode = "k"}
 Utils.TweenInfos = {} :: {[string]: TweenInfo}
 Utils.ColorPalettes = {} :: {[string]: ColorPalette}
 Utils.MemoizeCache = {} :: {[GenericFunction]: GenericStringAnyTable}
-local MemoizedFunctionSet = {} :: {[GenericFunction]: boolean}
-Utils.Signals = Signal.Signals :: {SignalData} -- Making sure its correctly types idrk
+Utils.MemoizedFunctionSet = {} :: {[GenericFunction]: boolean}
+Utils.Signals = Signal.Signals :: {SignalData} -- Making sure its correctly typed idrk
+Utils.PropertyListCache = {} :: {[string]: any} -- ReflectionService.GetPropertiesOfClass results per class
+Utils.Enums = {} :: {[string]: EnumTable}
 
 --// Initialization
 if IsTweenStorageWeak then
@@ -116,6 +126,8 @@ end
     -- Table manipulation functions are useful for working with tables in Lua. Here are some common functions:
     -- Utils.DeepCopy: Creates a deep copy of a table, including nested tables.
     -- Utils.DeepDiff: Compares two tables and returns a table containing the differences.
+	-- Utils.Patch: Applies a Utils.DeepDiff result back onto a table (the inverse of DeepDiff).
+	-- Utils.DeepEqual: Returns true if two tables are deeply equal (DeepDiff via JSON or recursion).
     -- Utils.Shuffle: Randomly shuffles the elements of a table in place.
     -- Utils.Pick: Create a table containing certain keys from the original table.
     -- Utils.Omit: Create a table containing everything except certain keys from the original table.
@@ -180,6 +192,69 @@ function Utils.DeepDiff(Table1: GenericTable, Table2: GenericTable): GenericTabl
 	return Diff
 end
 
+-- Returns true if Table1 and Table2 are deeply equal: primitives compare by value and tables are
+-- compared recursively and order-independently. Attempts a JSON serialization comparison first,
+-- then falls back to DeepDiff (equal when the diff comes back empty) if the data isn't serializable
+-- or if SkipJSON is true. SkipJSON forces the recursive path for non-serializable data.
+function Utils.DeepEqual(Table1: any, Table2: any, SkipJSON: boolean?): boolean
+	if not SkipJSON then
+		local Success1, Serialized1 = pcall(function()
+			return HttpService:JSONEncode(Table1)
+		end)
+		local Success2, Serialized2 = pcall(function()
+			return HttpService:JSONEncode(Table2)
+		end)
+
+		if Success1 and Success2 then
+			return Serialized1 == Serialized2
+		end
+	end
+
+	if Table1 == Table2 then
+		return true
+	end
+
+	if type(Table1) ~= "table" or type(Table2) ~= "table" then
+		return false
+	end
+
+	return next(Utils.DeepDiff(Table1, Table2)) == nil
+end
+
+-- Applies a Utils.DeepDiff result back onto Table, mutating it in place and returning it.
+-- Value pairs ({Table1Value, Table2Value}) write/remove keys; nested sub-diffs recurse into the
+-- matching nested table. The natural inverse of DeepDiff: after Patch(Table, DeepDiff(Table, Target)),
+-- Table deeply equals Target.
+function Utils.Patch(Table: GenericTable, Diff: GenericTable): GenericTable
+	for Key, Entry in pairs(Diff) do
+		if type(Entry) == "table" then
+			-- A pair is {Table1Value, Table2Value} (either slot may be nil for removed/added keys);
+			-- anything with other keys is a nested sub-diff. Note: pairs() skips nil values, so a
+			-- removal pair {OldValue, nil} only shows key 1 and an addition {nil, NewValue} only key 2.
+			local AllPairKeys = true
+			for EntryKey in pairs(Entry) do
+				if EntryKey ~= 1 and EntryKey ~= 2 then
+					AllPairKeys = false
+					break
+				end
+			end
+
+			if AllPairKeys then
+				Table[Key] = Entry[2]
+			else
+				if type(Table[Key]) ~= "table" then
+					Table[Key] = {}
+				end
+				Utils.Patch(Table[Key], Entry)
+			end
+		else
+			Table[Key] = Entry
+		end
+	end
+
+	return Table
+end
+
 -- Shuffles the elements of Table in place and returns it. If Recursive, nested tables are shuffled in place too.
 function Utils.Shuffle(Table: GenericTable, Recursive: boolean?): GenericTable
 	local Keys = {}
@@ -204,10 +279,16 @@ function Utils.Shuffle(Table: GenericTable, Recursive: boolean?): GenericTable
 end
 
 -- Shared helper for Pick/Omit: keeps the keys in Keys when IsPick is true, otherwise keeps everything else.
+-- The KeySet lookup makes membership checks O(1) instead of scanning Keys for every entry.
 local function basePickOmit(Table: GenericTable, Keys: {any}, IsPick: boolean): GenericTable
+	local KeySet = {}
+	for _, Key in ipairs(Keys) do
+		KeySet[Key] = true
+	end
+
 	local Result = {}
 	for Key, Value in pairs(Table) do
-		local ShouldInclude = table.find(Keys, Key) ~= nil
+		local ShouldInclude = KeySet[Key] == true
 		if (IsPick and ShouldInclude) or (not IsPick and not ShouldInclude) then
 			Result[Key] = Value
 		end
@@ -227,15 +308,31 @@ function Utils.Omit(Table: GenericTable, Keys: {any}): GenericTable
 end
 
 -- Returns a new list containing only unique values from Table. If Recursive, nested tables are deduplicated recursively.
+-- Primitive values are deduplicated with an O(1) set; tables/functions fall back to a linear scan by reference.
 function Utils.Unique(Table: GenericTable, Recursive: boolean?): GenericTable
 	local UniqueValues = {}
+	local PrimitiveSet = {}
 	local Result = {}
 
 	for _, Value in pairs(Table) do
 		if type(Value) == "table" and Recursive then
 			Value = Utils.Unique(Value, Recursive)
 		end
-		if not table.find(UniqueValues, Value) then
+
+		local ValueType = type(Value)
+		local Seen = false
+		if ValueType == "number" or ValueType == "string" or ValueType == "boolean" then
+			local SetKey = `{ValueType}:{tostring(Value)}`
+			if PrimitiveSet[SetKey] then
+				Seen = true
+			else
+				PrimitiveSet[SetKey] = true
+			end
+		else
+			Seen = table.find(UniqueValues, Value) ~= nil
+		end
+
+		if not Seen then
 			table.insert(UniqueValues, Value)
 			table.insert(Result, Value)
 		end
@@ -268,6 +365,54 @@ function Utils.Filter(Table: GenericTable, FilterFunction: (any) -> boolean, Rec
 		end
 	end
 	return Filtered
+end
+
+-- Returns true if any value in Table equals Value (reference or value comparison per Luau ==).
+function Utils.Contains(Table: GenericTable, Value: any): boolean
+	for _, Entry in pairs(Table) do
+		if Entry == Value then
+			return true
+		end
+	end
+
+	return false
+end
+
+-- Groups Table's entries into buckets by the key KeyFunction returns for each (value, key) pair.
+-- Each group keeps the original keys of its entries: GroupBy({a = 1, b = 2}, v % 2) -> {[1] = {a = 1}, [0] = {b = 2}}.
+function Utils.GroupBy(Table: GenericTable, KeyFunction: (Value: any, Key: any) -> any): GenericTable
+	local Groups = {}
+	for Key, Value in pairs(Table) do
+		local GroupKey = KeyFunction(Value, Key)
+		local Group = Groups[GroupKey]
+		if not Group then
+			Group = {}
+			Groups[GroupKey] = Group
+		end
+		Group[Key] = Value
+	end
+
+	return Groups
+end
+
+-- Returns a flat list of every non-table value in Table, recursing through nested tables.
+-- Flatten({1, {2, 3}, {4, {5}}}) -> {1, 2, 3, 4, 5}.
+function Utils.Flatten(Table: GenericTable): GenericTable
+	local Result = {}
+
+	local function Collect(Value: any)
+		if type(Value) == "table" then
+			for _, Child in pairs(Value) do
+				Collect(Child)
+			end
+		else
+			table.insert(Result, Value)
+		end
+	end
+
+	Collect(Table)
+
+	return Result
 end
 
 local function baseKeysValues(Table: GenericTable, Recursive: boolean?, Keys: boolean?): GenericTable
@@ -417,46 +562,6 @@ function Utils.CreateTableWithDefault(Default: any, Table: GenericTable?): Table
 	return (setmetatable(Defaulted, Meta) :: any) :: TableWithDefault
 end
 
--- Returns true if Value1 and Value2 are deeply equal: primitives compare by value, tables are
--- compared recursively and order-independently, and everything else compares by reference.
--- Cyclic tables are handled (equal cycles return true). The runtime equivalent of Memoize's keying.
-function Utils.DeepEqual(Value1: any, Value2: any): boolean
-	-- Maps each visited table of Value1 to the table of Value2 it is being compared against,
-	-- so cyclic structures compare equal when their cycles mirror each other.
-	local Visited: {[any]: any} = {}
-
-	local function Equals(A: any, B: any): boolean
-		if A == B then
-			return true
-		end
-
-		if type(A) ~= "table" or type(B) ~= "table" then
-			return false
-		end
-
-		if Visited[A] ~= nil then
-			return Visited[A] == B
-		end
-		Visited[A] = B
-
-		for Key, Value in pairs(A) do
-			if not Equals(Value, B[Key]) then
-				return false
-			end
-		end
-
-		for Key in pairs(B) do
-			if A[Key] == nil then
-				return false
-			end
-		end
-
-		return true
-	end
-
-	return Equals(Value1, Value2)
-end
-
 -- Creates a computed value: Value is produced by Compute(), and any dependency changing
 -- triggers a recomputation. Dependencies can be a single Utils Signal, observed table or other
 -- computed value, or a list of them (observed/computed tables use their OnChanged signal).
@@ -531,6 +636,35 @@ function Utils.Computed(Dependencies: Signal | ObservedTable | ComputedValue | {
 	Recompute()
 
 	return (setmetatable(Computed, Meta) :: any) :: ComputedValue
+end
+
+-- Creates a strict, read-only constant table: unknown-key reads and any writes error.
+-- The result is stored in Utils.Enums under Name and returned. Luau's proxy pattern is used
+-- (empty table + __index into a backing store) so every access is intercepted.
+function Utils.Enum(Name: string, Values: GenericTable): EnumTable
+	local Enum = {}
+
+	local Meta: any = {
+		Values = Values,
+	}
+
+	Meta.__index = function(_, Key)
+		local Value = Values[Key]
+		if Value == nil then
+			error(`[Utils - Enum] "{tostring(Key)}" is not a member of enum "{Name}"`)
+		end
+
+		return Value
+	end
+
+	Meta.__newindex = function()
+		error(`[Utils - Enum] "{Name}" is read-only`)
+	end
+
+	local Result = (setmetatable(Enum, Meta) :: any) :: EnumTable
+	Utils.Enums[Name] = Result
+
+	return Result
 end
 
 --[[ Signal
@@ -674,6 +808,39 @@ function Utils.Truncate(String: string, Length: number, Prefix: string?): string
 	return `{String:sub(1, Length)}{Prefix or ""}`
 end
 
+-- Word-wraps String into an array of lines of at most Width characters. Words longer than Width
+-- are hard-cut into chunks; the result has no leading/trailing whitespace on any line.
+function Utils.Wrap(String: string, Width: number): {string}
+	local Lines = {}
+	local CurrentLine = ""
+	for Word in String:gmatch("%S+") do
+		if #Word > Width then
+			if #CurrentLine > 0 then
+				table.insert(Lines, CurrentLine)
+				CurrentLine = ""
+			end
+			while #Word > Width do
+				table.insert(Lines, Word:sub(1, Width))
+				Word = Word:sub(Width + 1)
+			end
+			CurrentLine = Word
+		elseif #CurrentLine == 0 then
+			CurrentLine = Word
+		elseif #CurrentLine + 1 + #Word <= Width then
+			CurrentLine ..= " " .. Word
+		else
+			table.insert(Lines, CurrentLine)
+			CurrentLine = Word
+		end
+	end
+
+	if #CurrentLine > 0 then
+		table.insert(Lines, CurrentLine)
+	end
+
+	return Lines
+end
+
 --[[ Math Utilities
     -- Math utility functions are useful for performing common mathematical operations in Lua. Here are some common functions:
     -- Utils.IsEven: Checks if a number is even.
@@ -702,6 +869,42 @@ end
 -- Returns true if Number1 and Number2 are within Tolerance of each other.
 function Utils.IsClose(Number1: number, Number2: number, Tolerance: number): boolean
 	return math.abs(Number1 - Number2) <= Tolerance
+end
+
+-- Returns the sum of all given numbers.
+function Utils.Sum(...: number): number
+	local Total = 0
+	for Index = 1, select("#", ...) do
+		Total += select(Index, ...)
+	end
+
+	return Total
+end
+
+-- Returns the average of all given numbers (0 when none are given).
+function Utils.Average(...: number): number
+	local Count = select("#", ...)
+	if Count == 0 then
+		return 0
+	end
+
+	return Utils.Sum(...) / Count
+end
+
+-- Returns the median of all given numbers (0 when none are given).
+function Utils.Median(...: number): number
+	local Values = {...}
+	if #Values == 0 then
+		return 0
+	end
+
+	table.sort(Values)
+	local Middle = #Values // 2
+	if #Values % 2 == 0 then
+		return (Values[Middle] + Values[Middle + 1]) / 2
+	end
+
+	return Values[Middle + 1]
 end
 
 -- Randomness
@@ -745,6 +948,16 @@ end
 -- Returns a random Color3.
 function Utils.RandomColor(): Color3
 	return Color3.new(math.random(), math.random(), math.random())
+end
+
+-- Returns a random integer usable as a seed.
+function Utils.RandomSeed(): number
+	return math.random(1, 2147483647)
+end
+
+-- Returns a random integer between Min and Max (inclusive).
+function Utils.RandomInt(Min: number, Max: number): number
+	return math.random(Min, Max)
 end
 
 --[[ Tween Utilities
@@ -1020,6 +1233,30 @@ function Utils.TimeDifference(UnixTimestamp: number): number
 	return UnixTimestamp - os.time()
 end
 
+-- Formats a duration (in seconds) as a countdown string.
+-- Format presets: "Clock" (default) → hh:mm:ss, "MMSS" → mm:ss with total minutes (can exceed 59),
+-- "Short" → 5h 4m 3s, "Long" → 5 hours, 4 minutes and 3 seconds. Custom templates use the same
+-- tokens as the duration engine: {h} {m} {s} (omitted when zero), {hh} {mm} {ss} (always shown,
+-- zero-padded), and word tokens like {hours} {minutes} {seconds} (pluralized).
+function Utils.FormatCountdown(Seconds: number, Format: string?): string
+	if Format == "MMSS" then
+		return string.format("%02d:%02d", math.floor(Seconds / 60), math.floor(Seconds % 60))
+	end
+
+	local Template: string
+	if Format == nil or Format == "Clock" then
+		Template = "{hh}:{mm}:{ss}"
+	elseif Format == "Short" then
+		Template = "{h}h {m}m {s}s"
+	elseif Format == "Long" then
+		Template = "{hours}, {minutes} and {seconds}"
+	else
+		Template = Format
+	end
+
+	return formatDuration(Seconds, nil, Template)
+end
+
 -- Time Conversion
 -- Converts a time value in the given Unit (e.g., "Minutes") to milliseconds.
 function Utils.ToMilliseconds(Time: number, Unit: string): number
@@ -1186,12 +1423,16 @@ end
 function Utils.GetProperties(Instance: Instance): GenericTable
 	local Properties = {}
 
-	local Success, PropertyList = pcall(ReflectionService.GetPropertiesOfClass, ReflectionService, Instance.ClassName, {
-		Security = SecurityCapabilities.new(Enum.SecurityCapability.Basic)
-	})
-
-	if not Success then
-		return Properties
+	local PropertyList = Utils.PropertyListCache[Instance.ClassName]
+	if PropertyList == nil then
+		local Success, List = pcall(ReflectionService.GetPropertiesOfClass, ReflectionService, Instance.ClassName, {
+			Security = SecurityCapabilities.new(Enum.SecurityCapability.Basic)
+		})
+		if not Success then
+			return Properties
+		end
+		PropertyList = List
+		Utils.PropertyListCache[Instance.ClassName] = List
 	end
 
 	for _, Property in ipairs(PropertyList) do
@@ -1222,11 +1463,16 @@ end
 
 -- Copies all writable value properties from Source to Target (only properties writable by Basic, user-script security are included). Skips read-only properties and Parent.
 function Utils.CopyProperties(Source: Instance, Target: Instance)
-	local Success, PropertyList = pcall(ReflectionService.GetPropertiesOfClass, ReflectionService, Source.ClassName, {
-		Security = SecurityCapabilities.new(Enum.SecurityCapability.Basic)
-	})
-	if not Success then
-		return
+	local PropertyList = Utils.PropertyListCache[Source.ClassName]
+	if PropertyList == nil then
+		local Success, List = pcall(ReflectionService.GetPropertiesOfClass, ReflectionService, Source.ClassName, {
+			Security = SecurityCapabilities.new(Enum.SecurityCapability.Basic)
+		})
+		if not Success then
+			return
+		end
+		PropertyList = List
+		Utils.PropertyListCache[Source.ClassName] = List
 	end
 
 	for _, Property in ipairs(PropertyList) do
@@ -1312,11 +1558,16 @@ end
 
 -- Returns true if Instance has a property named PropertyName.
 function Utils.HasProperty(Instance: Instance, PropertyName: string): boolean
-	local Success, PropertyList = pcall(ReflectionService.GetPropertiesOfClass, ReflectionService, Instance.ClassName, {
-		Security = SecurityCapabilities.new(Enum.SecurityCapability.Basic)
-	})
-	if not Success then
-		return false
+	local PropertyList = Utils.PropertyListCache[Instance.ClassName]
+	if PropertyList == nil then
+		local Success, List = pcall(ReflectionService.GetPropertiesOfClass, ReflectionService, Instance.ClassName, {
+			Security = SecurityCapabilities.new(Enum.SecurityCapability.Basic)
+		})
+		if not Success then
+			return false
+		end
+		PropertyList = List
+		Utils.PropertyListCache[Instance.ClassName] = List
 	end
 
 	for _, Property in ipairs(PropertyList) do
@@ -1486,6 +1737,120 @@ function Utils.Backoff(Function: GenericFunction, Delay: ((...any) -> number) | 
 	return State
 end
 
+-- Creates a repeating timer control object: Start() runs Function every Seconds (firing OnAdvance with the
+-- tick count), Stop() halts it, Reset() restarts the tick count (keeps running if it was). OnStart, OnStop,
+-- OnReset and OnAdvance(TickCount) are Utils Signals. If LoopCount is given, the timer stops automatically
+-- after that many ticks and fires OnLooped(TickCount).
+function Utils.Interval(Seconds: number, Function: ((TickCount: number) -> ())?, LoopCount: number?): GenericTable
+	local Interval = {}
+
+	local Meta: any = {
+		Running = false,
+		TickCount = 0,
+		Connection = nil,
+		OnStart = Utils.NewSignal(),
+		OnStop = Utils.NewSignal(),
+		OnReset = Utils.NewSignal(),
+		OnAdvance = Utils.NewSignal(),
+		OnLooped = Utils.NewSignal(),
+	}
+
+	local function Tick()
+		Meta.TickCount += 1
+
+		if Function then
+			Function(Meta.TickCount)
+		end
+
+		Meta.OnAdvance:Fire(Meta.TickCount)
+
+		if LoopCount and Meta.TickCount >= LoopCount then
+			Meta.OnLooped:Fire(Meta.TickCount)
+			Meta.Running = false
+			Meta.Connection = nil
+			Meta.OnStop:Fire()
+			return
+		end
+
+		Meta.Connection = task.delay(Seconds, Tick)
+	end
+
+	Meta.__index = function(_, Key): any
+		if Key == "Start" then
+			return function()
+				if Meta.Running then
+					return
+				end
+				Meta.Running = true
+				Meta.TickCount = 0
+				Meta.OnStart:Fire()
+				Meta.Connection = task.delay(Seconds, Tick)
+			end
+		elseif Key == "Stop" then
+			return function()
+				if not Meta.Running then
+					return
+				end
+				Meta.Running = false
+				if Meta.Connection then
+					Meta.Connection:Cancel()
+				end
+				Meta.Connection = nil
+				Meta.OnStop:Fire()
+			end
+		elseif Key == "Reset" then
+			return function()
+				local WasRunning = Meta.Running
+				if Meta.Connection then
+					Meta.Connection:Cancel()
+				end
+				Meta.Connection = nil
+				Meta.Running = false
+				Meta.TickCount = 0
+				Meta.OnReset:Fire()
+				if WasRunning then
+					Meta.Running = true
+					Meta.Connection = task.delay(Seconds, Tick)
+				end
+			end
+		elseif Key == "OnStart" then
+			return Meta.OnStart
+		elseif Key == "OnStop" then
+			return Meta.OnStop
+		elseif Key == "OnReset" then
+			return Meta.OnReset
+		elseif Key == "OnAdvance" then
+			return Meta.OnAdvance
+		elseif Key == "OnLooped" then
+			return Meta.OnLooped
+		end
+
+		return nil
+	end
+
+	return (setmetatable(Interval, Meta) :: any) :: GenericTable
+end
+
+-- Calls Function with the given arguments; if it errors, retries up to Attempts total calls,
+-- waiting Delay seconds between attempts. Returns the first successful result, or nil, ErrorMessage
+-- when every attempt fails.
+function Utils.Retry(Function: (...any) -> any, Attempts: number, Delay: number?, ...: any): any
+	local LastError: any = nil
+	for Attempt = 1, Attempts do
+		local Success, Result = pcall(Function, ...)
+		if Success then
+			return Result
+		end
+
+		LastError = Result
+		if Attempt < Attempts and Delay ~= nil and Delay > 0 then
+			task.wait(Delay)
+		end
+	end
+
+	return nil, LastError
+end
+
 --[[ Function Utilities
     -- Function utility functions (sounds weird i know) are useful for working with functions in Luau. Here are some common functions:
     -- Utils.Once: Returns a function that will only execute once, no matter how many times it is called.
@@ -1521,7 +1886,7 @@ function Utils.Memoize(Function: GenericFunction): GenericFunction
 		end
 
 		if ValueType == "function" then
-			if MemoizedFunctionSet[Value] then
+			if Utils.MemoizedFunctionSet[Value] then
 				return `function:{tostring(Value)}`
 			end
 
@@ -1567,11 +1932,10 @@ function Utils.Memoize(Function: GenericFunction): GenericFunction
 		return Result
 	end
 
-	MemoizedFunctionSet[Wrapper] = true
+	Utils.MemoizedFunctionSet[Wrapper] = true
 
 	return Wrapper
 end
-
 
 --[[ Color Utilities
     -- Color utility functions are useful for working with colors in Roblox. Here are some common functions:
@@ -1614,6 +1978,17 @@ end
 
 function Utils.GetColorBrightness(Color: Color3): number
 	return (Color.R * 0.299 + Color.G * 0.587 + Color.B * 0.114)
+end
+
+-- Returns black or white, whichever contrasts Color the most (same weights as GetColorBrightness,
+-- thresholded at 186/255 like the classic "optimal" text color rule).
+function Utils.GetContrastColor(Color: Color3): Color3
+	local Brightness = Color.R * 0.299 + Color.G * 0.587 + Color.B * 0.114
+	if Brightness <= 0.729 then
+		return Color3.new(1, 1, 1)
+	end
+
+	return Color3.new()
 end
 
 -- Creates a ColorPalette table from the given colors, stores it in Utils.ColorPalettes under Name, and returns it.
