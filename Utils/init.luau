@@ -1115,7 +1115,7 @@ local function formatDuration(Time: number, MaxUnit: string?, Template: string?)
 					end
 				elseif PrevShown and NextShown then
 					table.insert(Parts, Text)
-elseif PrevShown ~= NextShown then
+				elseif PrevShown ~= NextShown then
 				-- A joiner (", ", ":", " and ") becomes a space; a unit suffix like "m " sticks to its shown unit
 				local Stripped = Segment.Text:gsub("[%s,:]", "")
 				if Stripped == "" or Stripped == "and" then
