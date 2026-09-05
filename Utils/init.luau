@@ -1172,8 +1172,8 @@ local function formatDate(UnixTimestamp: number, Template: string): string
 end
 
 -- Formats a unix timestamp into a date/time string.
--- Format can be a preset ("DateTime" (default) → "2026-09-02 14:30:45", "Date" → "2026-09-02",
--- "Clock" → "14:30:45", "Short" → "2 Sep 26", "Long" → "2 September 2026") or a custom template
+-- Format can be a preset ("DateTime" (default) -> "2026-09-02 14:30:45", "Date" -> "2026-09-02",
+-- "Clock" -> "14:30:45", "Short" -> "2 Sep 26", "Long" -> "2 September 2026") or a custom template
 -- using the tokens documented on formatDate (e.g. "{h}:{mm}:{ss}" for an unpadded clock).
 function Utils.FormatTime(UnixTimestamp: number, Format: string?): string
 	local Template: string
@@ -1233,8 +1233,8 @@ function Utils.TimeDifference(UnixTimestamp: number): number
 end
 
 -- Formats a duration (in seconds) as a countdown string.
--- Format presets: "Clock" (default) → hh:mm:ss, "MMSS" → mm:ss with total minutes (can exceed 59),
--- "Short" → 5h 4m 3s, "Long" → 5 hours, 4 minutes and 3 seconds. Custom templates use the same
+-- Format presets: "Clock" (default) -> hh:mm:ss, "MMSS" -> mm:ss with total minutes (can exceed 59),
+-- "Short" -> 5h 4m 3s, "Long" -> 5 hours, 4 minutes and 3 seconds. Custom templates use the same
 -- tokens as the duration engine: {h} {m} {s} (omitted when zero), {hh} {mm} {ss} (always shown,
 -- zero-padded), and word tokens like {hours} {minutes} {seconds} (pluralized).
 function Utils.FormatCountdown(Seconds: number, Format: string?): string
